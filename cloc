@@ -3386,10 +3386,11 @@ sub diff_report     {                        # {{{1
     }
     my $PCT_symbol = "";
        $PCT_symbol = " \%" if $opt_by_percent;
-    $data_line .= sprintf "%${spacing_2}s %${spacing_2}s %${spacing_2}s",
+    $data_line .= sprintf "%${spacing_2}s %${spacing_2}s %${spacing_2}s %${spacing_2}s",
         "blank${PCT_symbol}"         ,
         "comment${PCT_symbol}"       ,
-        "code";
+        "code${PCT_symbol}"          ,
+        "comment%";
 
     if ($Style eq "txt") {
         push @results, $data_line;
@@ -4213,10 +4214,12 @@ sub generate_report {                        # {{{1
     my $spacing_1 = 13;
     my $spacing_2 =  9;
     my $spacing_3 = 17;
+    my $spacing_4 = 13; # 新增用于注释率列的宽度
     if (!$opt_3) {
         $spacing_1 = 19;
         $spacing_2 = 14;
         $spacing_3 = 27;
+        $spacing_4 = 17; # 更新注释率列宽度
     }
     $spacing_0 += $column_1_offset;
     $spacing_1 += $column_1_offset;
@@ -4240,6 +4243,8 @@ sub generate_report {                        # {{{1
         '6' => { 'xml' => 'factor="%.2f" scaled="%.2f" ',
                  'txt' => ' x %6.2f = %14.2f',
                },
+        '7' => { 'txt' => "\%${spacing_4}.2f%%",  # 更新注释率列格式
+               },
     );
     my $Style = "txt";
        $Style = "xml" if $opt_xml ;
@@ -4247,9 +4252,9 @@ sub generate_report {                        # {{{1
        $Style = "xml" if $opt_json;  # not a typo; just set to anything but txt
        $Style = "xml" if $opt_csv ;  # not a typo; just set to anything but txt
 
-    my $hyphen_line = sprintf "%s", '-' x (79 + $column_1_offset);
-       $hyphen_line = sprintf "%s", '-' x (68 + $column_1_offset)
-            if (!$opt_sum_reports) and (!$opt_3) and (68 + $column_1_offset) > 79;
+    my $hyphen_line = sprintf "%s", '-' x (98 + $column_1_offset);
+       $hyphen_line = sprintf "%s", '-' x (85 + $column_1_offset)
+            if (!$opt_sum_reports) and (!$opt_3) and (85 + $column_1_offset) > 98;
     my $data_line  = "";
     my $first_column;
     my $BY_LANGUAGE = 0;
@@ -4309,10 +4314,11 @@ sub generate_report {                        # {{{1
         }
         my $PCT_symbol = "";
            $PCT_symbol = " \%" if $opt_by_percent;
-        $data_line .= sprintf "%${spacing_2}s %${spacing_2}s %${spacing_2}s",
+        $data_line .= sprintf "%${spacing_2}s %${spacing_2}s %${spacing_2}s %${spacing_4}s",
             "blank${PCT_symbol}"   ,
             "comment${PCT_symbol}" ,
-            "code";
+            "code${PCT_symbol}"    ,
+            "comment rate";
         $data_line .= sprintf " %8s   %14s",
             "scale"         ,
             "3rd gen. equiv"
@@ -4345,7 +4351,7 @@ sub generate_report {                        # {{{1
         } else {
             $header2 = "files${DELIM}language";
         }
-        $header2 .= "${DELIM}blank${DELIM}comment${DELIM}code";
+        $header2 .= "${DELIM}blank${DELIM}comment${DELIM}code${DELIM}comment_rate";
         $header2 .= "${DELIM}scale${DELIM}3rd gen. equiv" if $opt_3;
         $header2 .= ${DELIM} . '"' . $header_line . '"';
         push @results, $header2;
@@ -4416,6 +4422,11 @@ sub generate_report {                        # {{{1
               $rhh_count->{$lang_or_file}{'comment'},
               $rhh_count->{$lang_or_file}{'code'}   ;
         }
+        my $comment_rate = 0;
+        # $comment_rate = ($rhh_count->{$lang_or_file}{'comment'} / $sum_lines) * 100 if $sum_lines > 0;
+        my $comment_rate = ($rhh_count->{$lang_or_file}{'comment'} / ($rhh_count->{$lang_or_file}{'comment'} + $rhh_count->{$lang_or_file}{'code'})) * 100;
+        $data_line .= sprintf $Format{7}{$Style}, $comment_rate;
+
         $data_line .= sprintf $Format{6}{$Style}  ,
             $factor                               ,
             $scaled if $opt_3;
@@ -4508,7 +4519,8 @@ sub generate_report {                        # {{{1
                       $rhh_count->{$lang_or_file}{'comment'}. ${DELIM} .
                       $rhh_count->{$lang_or_file}{'code'};
             }
-            $str .= $extra_3;
+            # $str .= $extra_3;
+            $str .= ${DELIM} . sprintf("%.2f", $comment_rate) . $extra_3;
             push @results, $str;
 
         } else {
@@ -4572,6 +4584,7 @@ sub generate_report {                        # {{{1
           push @results, "  ${Q}code${Q}: "   . $sum_code    . $C;
         }
         push @results, "  ${Q}nFiles${Q}: " . $sum_files   . $C;
+        push @results, "  ${Q}comment_rate${Q}: " . sprintf("%.2f", ($sum_comment / ($sum_comment + $sum_code)) * 100) . $C;
         if ($opt_3) {
             push @results, "  ${Q}scaled${Q}: " . $sum_scaled . $C;
             push @results, "  ${Q}factor${Q}: " . $avg_scale  . $C;
@@ -4605,6 +4618,7 @@ sub generate_report {                        # {{{1
             push @entries, $sum_comment;
         }
         push @entries, $sum_code;
+        push @entries, sprintf("%.2f", ($sum_comment / ($sum_comment + $sum_code)) * 100);
         if ($opt_3) {
             push @entries, $sum_scaled;
             push @entries, $avg_scale ;
@@ -4632,6 +4646,8 @@ sub generate_report {                        # {{{1
               $sum_comment ,
               $sum_code    ;
         }
+        $data_line .= sprintf $Format{7}{$Style},
+            ($sum_comment / $sum_lines) * 100;
         $data_line .= sprintf $Format{'6'}{$Style},
             $avg_scale   ,
             $sum_scaled if $opt_3;
