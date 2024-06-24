@@ -4647,7 +4647,7 @@ sub generate_report {                        # {{{1
               $sum_code    ;
         }
         $data_line .= sprintf $Format{7}{$Style},
-            ($sum_comment / $sum_lines) * 100;
+            ($sum_comment / ($sum_comment + $sum_code)) * 100;
         $data_line .= sprintf $Format{'6'}{$Style},
             $avg_scale   ,
             $sum_scaled if $opt_3;
